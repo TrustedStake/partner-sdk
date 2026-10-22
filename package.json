@@ -1,0 +1,83 @@
+{
+  "name": "@trustedstake/partner-sdk",
+  "version": "0.1.0-next.4",
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "AGENT-INTEGRATION.md",
+    "examples"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/browser.d.ts",
+      "import": "./dist/browser.js"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    },
+    "./polkadot": {
+      "types": "./dist/polkadot/index.d.ts",
+      "import": "./dist/polkadot/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run test",
+    "test:package": "node scripts/verify-package.mjs",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "demo": "node examples/native-ui/server.mjs"
+  },
+  "peerDependencies": {
+    "@polkadot/api": "^16.5.4",
+    "@polkadot/types": "^16.5.4",
+    "@polkadot/util": "^14.0.1",
+    "@polkadot/util-crypto": "^14.0.1"
+  },
+  "peerDependenciesMeta": {
+    "@polkadot/api": {
+      "optional": true
+    },
+    "@polkadot/types": {
+      "optional": true
+    },
+    "@polkadot/util": {
+      "optional": true
+    },
+    "@polkadot/util-crypto": {
+      "optional": true
+    }
+  },
+  "description": "Framework-neutral TrustedStake partner integration client and optional Polkadot adapter",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "next"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vitest": "4.1.12",
+    "@types/node": "20.19.30",
+    "@polkadot/api": "16.5.4",
+    "@polkadot/types": "16.5.4",
+    "@polkadot/util": "14.0.1",
+    "@polkadot/util-crypto": "14.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TrustedStake/partner-sdk.git"
+  },
+  "homepage": "https://github.com/TrustedStake/partner-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/TrustedStake/partner-sdk/issues"
+  },
+  "packageManager": "npm@11.9.0"
+}

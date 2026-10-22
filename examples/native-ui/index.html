@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Partner SDK · local demo</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font:
+          16px/1.6 system-ui,
+          sans-serif;
+        background: #101113;
+        color: #eceef1;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: 32px 20px;
+      }
+      main {
+        width: min(100%, 540px);
+      }
+      header {
+        text-align: center;
+        margin-bottom: 32px;
+      }
+      header img {
+        width: 230px;
+        max-width: 80%;
+        height: auto;
+      }
+      .note {
+        color: #9fa8b6;
+        font-size: 13px;
+      }
+      section {
+        border: 1px solid #2b2e35;
+        border-radius: 20px;
+        background: #15171b;
+        padding: 32px;
+      }
+      ol {
+        display: flex;
+        gap: 16px;
+        list-style: none;
+        padding: 0;
+        margin: 0 0 32px;
+        color: #9fa8b6;
+        font-size: 13px;
+      }
+      li {
+        flex: 1;
+        border-top: 2px solid #30343d;
+        padding-top: 12px;
+      }
+      li[aria-current="step"] {
+        border-color: #3e80f6;
+        color: #eef2fa;
+      }
+      h1 {
+        font-size: 26px;
+        line-height: 1.25;
+        margin: 0 0 16px;
+      }
+      p {
+        color: #aab2bf;
+        margin: 0 0 24px;
+      }
+      button {
+        width: 100%;
+        border: 0;
+        border-radius: 10px;
+        padding: 15px 20px;
+        background: #eef0f5;
+        color: #111319;
+        font: 600 15px/1.4 system-ui;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+      button:focus-visible,
+      a:focus-visible {
+        outline: 3px solid #4b91ff;
+        outline-offset: 4px;
+      }
+      footer {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin-top: 24px;
+        font-size: 13px;
+      }
+      a {
+        color: #bac7dc;
+        text-underline-offset: 4px;
+      }
+      #error {
+        color: #ffb3b3;
+        margin: 20px 0 0;
+      }
+      #error:empty {
+        display: none;
+      }
+      @media (max-width: 420px) {
+        section {
+          padding: 24px;
+        }
+        ol {
+          gap: 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <img src="/public/TS_logo_wordmark_white.svg" alt="TrustedStake" />
+        <div class="note">
+          Local SDK demo · simulated signatures · no transactions
+        </div>
+      </header>
+      <section aria-labelledby="heading">
+        <ol aria-label="Progress">
+          <li data-step="review">1. Join</li>
+          <li data-step="rebalance">2. Rebalance</li>
+          <li data-step="complete">3. Finish</li>
+        </ol>
+        <h1 id="heading">Loading strategy…</h1>
+        <p id="detail" aria-live="polite"></p>
+        <button id="next" type="button">Continue</button>
+        <p id="error" role="alert"></p>
+      </section>
+      <footer>
+        <a href="?scenario=repair">Try Complete Setup</a
+        ><a href="?">Start a new join</a>
+      </footer>
+    </main>
+    <script type="module" src="./app.mjs"></script>
+  </body>
+</html>
