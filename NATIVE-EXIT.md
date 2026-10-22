@@ -1,6 +1,6 @@
-# Native exit — local next.5 candidate
+# Native exit — next.5 prerelease
 
-This candidate has not been published or qualified against live services. Published next.4 does not include this lifecycle. Enable it only after deploying the matching owner-exit API and qualifying the intended partner, wallet and network. The join API alone is insufficient. No new backend schema or partner private credential is needed for these owner-exit routes; an existing partner record, correct network and wallet authorization remain required.
+This prerelease implements the native-exit client lifecycle; package availability does not establish live-service qualification. Version next.4 does not include this lifecycle. Enable it only after deploying the matching owner-exit API and qualifying the intended partner, wallet and network. The join API alone is insufficient. No new backend schema or partner private credential is needed for these owner-exit routes; an existing partner record, correct network and wallet authorization remain required.
 
 ## User flow
 

@@ -1,4 +1,4 @@
-> Local unpublished next.5 candidate. Native exit requires the matching unreleased API changes; see [NATIVE-EXIT.md](./NATIVE-EXIT.md). Do not treat this tree as a live-service release.
+> next.5 is a prerelease. Native exit requires the matching owner-exit API and qualification of the intended host, wallet and network; see [NATIVE-EXIT.md](./NATIVE-EXIT.md). Package availability alone does not establish live-service readiness.
 
 # TrustedStake partner SDK
 
