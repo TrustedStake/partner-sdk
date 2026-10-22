@@ -750,3 +750,8 @@ function createSession(
       ),
   };
 }
+
+export * from "./exit-browser.ts";
+export * from "./exit-api.ts";
+export * from "./exit-types.ts";
+export type { ExitScope, ExitFacts, ExitIntent, ExitPending, CanonicalExitReceipt, ExitApproval } from "./exit.ts";

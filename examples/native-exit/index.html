@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>Native exit candidate demo</title>
+  <style>
+    body {
+      margin: 0;
+      background: #f4f6f9;
+      color: #182435;
+      font: 16px/1.5 system-ui;
+    }
+    main {
+      max-width: 650px;
+      margin: 5vh auto;
+      padding: 28px;
+      background: white;
+      border: 1px solid #dce3ec;
+      border-radius: 16px;
+    }
+    h1 {
+      font-size: 25px;
+    }
+    button,
+    input {
+      font: inherit;
+    }
+    button {
+      padding: 12px 18px;
+      border: 0;
+      border-radius: 8px;
+      background: #194ba4;
+      color: white;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+    label {
+      display: block;
+      margin: 10px 0;
+    }
+    input[type="number"] {
+      width: 90px;
+      padding: 6px;
+    }
+    dt {
+      font-weight: 600;
+    }
+    dd {
+      margin: 0 0 12px;
+    }
+    #error {
+      color: #a11;
+      white-space: pre-wrap;
+    }
+    small {
+      color: #51647a;
+    }
+    details {
+      margin: 20px 0;
+    }
+    a {
+      color: #194ba4;
+    }
+  </style>
+  <main>
+    <small>LOCAL CANDIDATE · SYNTHETIC SERVICE AND CHAIN · NO WALLET</small>
+    <h1>Leave a strategy</h1>
+    <p>
+      End membership, remove strategy authority, then optionally convert alpha
+      into TAO in the same wallet. These are separate actions.
+    </p>
+    <dl>
+      <dt>Membership</dt>
+      <dd id="membership">Not checked</dd>
+      <dt>Strategy authority</dt>
+      <dd id="authority">Not checked</dd>
+      <dt>Remaining alpha</dt>
+      <dd id="holdings">Not checked</dd>
+    </dl>
+    <p id="progress"></p>
+    <section id="conversion" hidden>
+      <label
+        >Slippage limit (basis points)
+        <input
+          id="slippage"
+          type="number"
+          value="160"
+          min="0"
+          max="5000" /></label
+      ><label
+        ><input id="partial" type="checkbox" /> Allow partial fills; unsold
+        alpha will remain</label
+      >
+    </section>
+    <p id="review"></p>
+    <button id="next">Authorize simulated review</button>
+    <button id="switch" hidden>Use other simulated signer</button>
+    <p id="error" role="alert"></p>
+    <details>
+      <summary>Technical details (optional)</summary>
+      <pre id="technical"></pre>
+    </details>
+    <p>
+      <small
+        >No external transfer, real API, signature or transaction. This
+        exercises the emitted SDK controller with mock adapters; concrete
+        RPC/signature verification is covered separately by Node tests.
+        <a href="?multisig=1">Two-signer scenario</a> ·
+        <a href="?multisig=0">Ordinary wallet</a></small
+      >
+    </p>
+  </main>
+  <script type="module" src="/app.mjs"></script>
+</html>

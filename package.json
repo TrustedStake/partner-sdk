@@ -1,11 +1,12 @@
 {
   "name": "@trustedstake/partner-sdk",
-  "version": "0.1.0-next.4",
+  "version": "0.1.0-next.5",
   "type": "module",
   "files": [
     "dist",
     "README.md",
     "AGENT-INTEGRATION.md",
+    "NATIVE-EXIT.md",
     "examples"
   ],
   "exports": {

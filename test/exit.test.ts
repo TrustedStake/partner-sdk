@@ -30,6 +30,7 @@ const facts = (): ExitFacts => ({
   fee: "cleared",
   proxyPresent: true,
   otherProxyDependencies: 0,
+  otherActiveMemberships: 0,
   positions: [
     {
       hotkey: "hotkey",
@@ -64,6 +65,8 @@ const receipt = () => ({
   scope,
   transactionHash: hash("c"),
   blockHash: hash("d"),
+  blockNumber: 101,
+  extrinsicIndex: 0,
   callHash: hash("e"),
   innerDispatchVerified: true as const,
 });
@@ -112,10 +115,10 @@ describe("candidate native exit facts and durable safety state", () => {
       );
     },
   );
-  it("does not advertise incomplete liquidation or automatically transfer funds", () => {
+  it("requires verified cessation and authority removal before conversion; never adds a transfer", () => {
     expect(() =>
       reviewNativeExit("convert-alpha", facts(), scope, now),
-    ).toThrow(/not implemented/);
+    ).toThrow(/Verify fees/);
     expect(() =>
       reviewNativeExit("external-transfer" as never, facts(), scope, now),
     ).toThrow(/Unsupported/);
@@ -235,6 +238,7 @@ describe("candidate native exit facts and durable safety state", () => {
         now,
       ),
     ).toThrow();
+    journal.submitted(hash("c"));
     expect(journal.reconcile(receipt(), f, now).operation).toBe("needs-review");
     f.proxyPresent = false;
     expect(journal.reconcile(receipt(), f, now).operation).toBe("succeeded");

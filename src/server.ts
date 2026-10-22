@@ -250,3 +250,5 @@ export function createServerBridge(
     }
   };
 }
+
+export { createNativeExitBridge, validateNativeExitRequest } from "./exit-bridge.ts";

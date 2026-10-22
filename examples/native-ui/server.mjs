@@ -9,7 +9,7 @@ const files = new Map([
   [prefix + 'examples/native-ui/app.mjs', new URL('app.mjs', import.meta.url)],
   [prefix + 'examples/native-ui/mock.mjs', new URL('mock.mjs', import.meta.url)],
   ['/public/TS_logo_wordmark_white.svg', new URL('assets/TS_logo_wordmark_white.svg', import.meta.url)],
-  ...['browser', 'core', 'contracts', 'fees', 'signing', 'allocation', 'encoding', 'types', 'chain', 'transport', 'request-policy', 'ownership'].map(name => [prefix + `dist/${name}.js`, new URL(`dist/${name}.js`, sdk)]),
+  ...['browser', 'core', 'contracts', 'fees', 'signing', 'allocation', 'encoding', 'types', 'chain', 'transport', 'request-policy', 'ownership', 'exit', 'exit-api', 'exit-browser', 'exit-types', 'exit-submission'].map(name => [prefix + `dist/${name}.js`, new URL(`dist/${name}.js`, sdk)]),
 ]);
 createServer(async (request, response) => {
   const file = files.get(new URL(request.url, 'http://127.0.0.1:4360').pathname);

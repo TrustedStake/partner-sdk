@@ -2,9 +2,10 @@ import type { MutationCoordinator } from "./ownership.ts";
 import type { Storage } from "./types.ts";
 import { HASH, UUID } from "./contracts.ts";
 
-// Internal candidate contract. Not exported by the published package entrypoints.
-// Native wire/chain adapters must supply verified evidence before this can ship.
+// Versioned native-exit contract. Journal state alone is never canonical execution proof.
 export type ExitIntent =
+  | "cancel-proposal"
+  | "pay-exit-fees"
   | "leave-membership"
   | "revoke-authority"
   | "convert-alpha";
@@ -28,6 +29,7 @@ export interface ExitFacts {
   fee: "cleared" | "payment-required" | "unknown";
   proxyPresent: boolean | "unknown";
   otherProxyDependencies: number | null;
+  otherActiveMemberships: number | null;
   positions: readonly {
     hotkey: string;
     netuid: number;
@@ -48,20 +50,41 @@ export interface ExitPending {
   version: 1;
   operationId: string;
   review: ExitReview;
-  state: "needs-review" | "submitted";
+  state: "needs-review" | "submitted" | "awaiting-signers";
+  details?: {
+    feeBundleId?: string;
+    originalReview?: ExitReview;
+    feeCheckout?: import("./exit-api.ts").ExitCheckout;
+    multisig?: import("./polkadot/types.ts").PendingMultisigOp;
+  };
   transactionHash?: string;
   callHash: string;
+}
+export interface ExitApproval {
+  operationId: string;
+  scope: ExitScope;
+  callHash: string;
+  transactionHash: string;
+  blockHash: string;
+  blockNumber: number;
+  extrinsicIndex: number;
+  approvalVerified: true;
+  operation: import("./polkadot/types.ts").PendingMultisigOp;
 }
 export type CanonicalExitReceipt =
   | { outcome: "unknown" }
   | {
-      outcome: "failed";
+      outcome: "failed" | "cancelled";
       operationId: string;
       scope: ExitScope;
       callHash: string;
       transactionHash: string;
       blockHash: string;
+      blockNumber: number;
+      extrinsicIndex: number;
       innerDispatchVerified: true;
+      /** Canonical settlement of an already verified proposal executed/cancelled by another signer. */
+      observedProposal?: { height: number; index: number };
     }
   | {
       outcome: "succeeded";
@@ -70,7 +93,11 @@ export type CanonicalExitReceipt =
       callHash: string;
       transactionHash: string;
       blockHash: string;
+      blockNumber: number;
+      extrinsicIndex: number;
       innerDispatchVerified: true;
+      /** Canonical settlement of an already verified proposal executed/cancelled by another signer. */
+      observedProposal?: { height: number; index: number };
     };
 const u64 = (value: string) => {
   if (typeof value !== "string" || !/^(0|[1-9][0-9]*)$/.test(value))
@@ -90,6 +117,9 @@ export function sameExitScope(a: ExitScope, b: ExitScope): boolean {
     "generation",
     "delegate",
   ].every((key) => a[key as keyof ExitScope] === b[key as keyof ExitScope]);
+}
+export function sameExitTarget(a: ExitScope, b: ExitScope): boolean {
+  return sameExitScope({ ...a, signer: b.signer }, b);
 }
 function assertFacts(facts: ExitFacts, scope: ExitScope, now: number) {
   if (
@@ -116,6 +146,9 @@ function assertFacts(facts: ExitFacts, scope: ExitScope, now: number) {
     ) ||
     !["cleared", "payment-required", "unknown"].includes(facts.fee) ||
     ![true, false, "unknown"].includes(facts.proxyPresent) ||
+    (facts.otherActiveMemberships !== null &&
+      (!Number.isSafeInteger(facts.otherActiveMemberships) ||
+        facts.otherActiveMemberships < 0)) ||
     (facts.otherProxyDependencies !== null &&
       (!Number.isSafeInteger(facts.otherProxyDependencies) ||
         facts.otherProxyDependencies < 0)) ||
@@ -148,6 +181,7 @@ function factsKey(facts: ExitFacts): string {
     facts.fee,
     facts.proxyPresent,
     facts.otherProxyDependencies,
+    facts.otherActiveMemberships,
     facts.positions
       .map((p) => [p.hotkey, p.netuid, p.amountRao, p.lockedRao])
       .sort(),
@@ -162,12 +196,23 @@ export function reviewNativeExit(
 ): ExitReview {
   assertFacts(facts, scope, now);
   if (
-    !["leave-membership", "revoke-authority", "convert-alpha"].includes(intent)
+    ![
+      "cancel-proposal",
+      "pay-exit-fees",
+      "leave-membership",
+      "revoke-authority",
+      "convert-alpha",
+    ].includes(intent)
   )
     throw new Error("Unsupported exit intent.");
-  if (facts.membership === "unknown")
+  if (facts.membership === "unknown" && intent !== "cancel-proposal")
     throw new Error("Membership needs reconciliation.");
-  if (intent === "leave-membership") {
+  if (intent === "cancel-proposal") {
+    // Depositor cancellation is checked against the exact live proposal by the adapter.
+  } else if (intent === "pay-exit-fees") {
+    if (facts.fee !== "payment-required")
+      throw new Error("No reviewed exit fee payment is required.");
+  } else if (intent === "leave-membership") {
     if (facts.membership !== "active")
       throw new Error("Membership has already ended.");
     if (facts.fee !== "cleared") throw new Error("Review exit fees first.");
@@ -187,9 +232,16 @@ export function reviewNativeExit(
           "Proxy is absent, unverified or needed by another membership.",
         );
     } else {
-      // Conversion quoting/submission remains deliberately unavailable until the
-      // bounded quote, partial-fill and canonical dispatch adapters are implemented.
-      throw new Error("Native liquidation adapter is not implemented.");
+      if (
+        facts.proxyPresent !== false ||
+        facts.otherActiveMemberships !== 0 ||
+        facts.fee !== "cleared"
+      )
+        throw new Error(
+          "Verify fees, remaining memberships and revoked authority before conversion.",
+        );
+      if (!facts.positions.some((p) => u64(p.amountRao) > 0n))
+        throw new Error("No alpha holdings remain to convert.");
     }
   }
   return {
@@ -225,16 +277,51 @@ function pendingValue(value: unknown, scope: ExitScope): ExitPending {
     p.version !== 1 ||
     !UUID.test(p.operationId) ||
     !HASH.test(p.callHash) ||
-    !["needs-review", "submitted"].includes(p.state) ||
+    !["needs-review", "submitted", "awaiting-signers"].includes(p.state) ||
     !p.review ||
-    !sameExitScope(p.review.scope, scope) ||
-    !["leave-membership", "revoke-authority"].includes(p.review.intent) ||
+    !sameExitTarget(p.review.scope, scope) ||
+    ![
+      "cancel-proposal",
+      "pay-exit-fees",
+      "leave-membership",
+      "revoke-authority",
+      "convert-alpha",
+    ].includes(p.review.intent) ||
     !HASH.test(p.review.blockHash) ||
     !Number.isSafeInteger(p.review.expiresAt) ||
     typeof p.review.factsKey !== "string" ||
     (p.transactionHash !== undefined && !HASH.test(p.transactionHash))
   )
     throw new Error("Exit journal needs review.");
+  if (
+    p.details &&
+    (typeof p.details !== "object" ||
+      Object.keys(p.details).some(
+        (k) =>
+          ![
+            "feeBundleId",
+            "feeCheckout",
+            "multisig",
+            "originalReview",
+          ].includes(k),
+      ) ||
+      (p.details.feeBundleId !== undefined &&
+        !UUID.test(p.details.feeBundleId)))
+  )
+    throw new Error("Exit journal details need review.");
+  if (p.details?.multisig) {
+    const op = p.details.multisig;
+    if (
+      op.chainId !== scope.genesisHash ||
+      op.managedAccount !== scope.wallet ||
+      op.multisigAddress !== scope.wallet ||
+      op.callHashHex !== p.callHash ||
+      op.authorizationProof ||
+      typeof op.callDataHex !== "string" ||
+      !/^0x(?:[0-9a-f]{2}){1,160000}$/i.test(op.callDataHex)
+    )
+      throw new Error("Multisig exit journal does not match.");
+  }
   return p;
 }
 /** Journal state is never a receipt. Uncertain work survives reload, dismissal and manual completion. */
@@ -265,6 +352,7 @@ export function createExitJournal(
       facts: ExitFacts,
       now: number,
       callHash: string,
+      details?: ExitPending["details"],
     ) {
       return coordinator.run(async () => {
         if (read())
@@ -283,9 +371,108 @@ export function createExitJournal(
             review,
             callHash,
             state: "needs-review",
+            ...(details ? { details: structuredClone(details) } : {}),
           } satisfies ExitPending),
         );
       });
+    },
+    reconcileMembership(facts: ExitFacts, now: number) {
+      const pending = read();
+      assertFacts(facts, scope, now);
+      if (!pending) return { operation: "none" as const, facts };
+      if (
+        pending.operationId !== operationId ||
+        pending.review.intent !== "leave-membership" ||
+        !sameExitTarget(pending.review.scope, scope)
+      )
+        throw new Error("Membership operation does not match.");
+      if (facts.membership !== "ended")
+        return { operation: "needs-review" as const, facts };
+      storage.removeItem(key);
+      return { operation: "succeeded" as const, facts };
+    },
+    recordApproval(receipt: ExitApproval) {
+      const pending = read();
+      if (
+        !pending ||
+        pending.operationId !== operationId ||
+        receipt.operationId !== operationId ||
+        receipt.approvalVerified !== true ||
+        !sameExitScope(receipt.scope, pending.review.scope) ||
+        receipt.transactionHash !== pending.transactionHash ||
+        receipt.callHash !== pending.callHash ||
+        receipt.blockNumber <= pending.review.blockNumber ||
+        !receipt.operation.timepoint ||
+        receipt.operation.callHashHex !== pending.callHash ||
+        receipt.operation.chainId !== scope.genesisHash ||
+        receipt.operation.managedAccount !== scope.wallet
+      )
+        throw new Error("Multisig approval receipt does not match.");
+      storage.setItem(
+        key,
+        JSON.stringify({
+          ...pending,
+          state: "awaiting-signers",
+          transactionHash: undefined,
+          details: { ...pending.details, multisig: receipt.operation },
+        }),
+      );
+    },
+    async continueReview(
+      review: ExitReview,
+      facts: ExitFacts,
+      now: number,
+      callHash: string,
+    ) {
+      return coordinator.run(async () => {
+        const pending = read();
+        if (
+          !pending ||
+          pending.operationId !== operationId ||
+          pending.state !== "awaiting-signers" ||
+          pending.transactionHash ||
+          !pending.details?.multisig?.timepoint ||
+          (pending.review.intent !== review.intent &&
+            review.intent !== "cancel-proposal") ||
+          pending.callHash !== callHash ||
+          !sameExitTarget(review.scope, scope)
+        )
+          throw new Error("Multisig continuation changed or is unresolved.");
+        assertExitReview(review, facts, now);
+        storage.setItem(
+          key,
+          JSON.stringify({
+            ...pending,
+            review,
+            state: "needs-review",
+            details: {
+              ...pending.details,
+              ...(review.intent === "cancel-proposal"
+                ? { originalReview: pending.review }
+                : {}),
+            },
+          }),
+        );
+      });
+    },
+    restoreUnsent() {
+      const pending = read();
+      if (!pending || pending.operationId !== operationId)
+        throw new Error("Exit operation does not match.");
+      // Only call with submitter proof that send was never invoked. A recorded
+      // signed hash may exist if the guard/storage handoff itself failed.
+      if (pending.details?.multisig?.timepoint)
+        storage.setItem(
+          key,
+          JSON.stringify({
+            ...pending,
+            review: pending.details.originalReview ?? pending.review,
+            state: "awaiting-signers",
+            transactionHash: undefined,
+            details: { ...pending.details, originalReview: undefined },
+          }),
+        );
+      else storage.removeItem(key);
     },
     submitted(transactionHash: string) {
       const pending = read();
@@ -310,22 +497,57 @@ export function createExitJournal(
       if (receipt.outcome === "unknown")
         return { operation: "needs-review" as const, facts };
       if (
-        !["succeeded", "failed"].includes(receipt.outcome) ||
+        !["succeeded", "failed", "cancelled"].includes(receipt.outcome) ||
         receipt.operationId !== operationId ||
-        !sameExitScope(receipt.scope, scope) ||
+        !sameExitScope(receipt.scope, pending.review.scope) ||
         receipt.callHash !== pending.callHash ||
         receipt.innerDispatchVerified !== true ||
         !HASH.test(receipt.transactionHash) ||
         !HASH.test(receipt.blockHash) ||
+        !Number.isSafeInteger(receipt.blockNumber) ||
+        receipt.blockNumber <= pending.review.blockNumber ||
+        !Number.isSafeInteger(receipt.extrinsicIndex) ||
+        receipt.extrinsicIndex < 0 ||
         (pending.transactionHash &&
           receipt.transactionHash !== pending.transactionHash)
       )
         throw new Error("Exit receipt does not match.");
+      const observed =
+        pending.state === "awaiting-signers" &&
+        !pending.transactionHash &&
+        !!pending.details?.multisig?.timepoint &&
+        !!receipt.observedProposal &&
+        pending.details.multisig.timepoint.height ===
+          receipt.observedProposal.height &&
+        pending.details.multisig.timepoint.index ===
+          receipt.observedProposal.index;
+      if (receipt.observedProposal && !observed)
+        throw new Error(
+          "Observed proposal does not match the verified pending approval.",
+        );
+      if (
+        receipt.outcome === "cancelled" &&
+        !observed &&
+        pending.review.intent !== "cancel-proposal"
+      )
+        throw new Error(
+          "Cancellation receipt requires the reviewed cancellation action.",
+        );
+      // An identical historical call is not proof of this operation. The guarded
+      // host must persist the signed extrinsic hash before broadcast; otherwise hold.
+      if (!pending.transactionHash && !observed)
+        return { operation: "needs-review" as const, facts };
       // Caller must provide the canonical, exact-call-bound adapter result. The first
       // slice only reconciles chain proxy revocation; membership needs API receipt binding.
-      if (pending.review.intent !== "revoke-authority")
-        throw new Error("Membership receipt adapter is not implemented.");
-      if (receipt.outcome === "succeeded" && facts.proxyPresent !== false)
+      if (pending.review.intent === "leave-membership")
+        throw new Error("Use generation-bound API membership reconciliation.");
+      if (
+        receipt.outcome === "succeeded" &&
+        ((pending.review.intent === "revoke-authority" &&
+          facts.proxyPresent !== false) ||
+          (pending.review.intent === "pay-exit-fees" &&
+            facts.fee !== "cleared"))
+      )
         return { operation: "needs-review" as const, facts };
       storage.removeItem(key);
       return { operation: receipt.outcome, facts };
