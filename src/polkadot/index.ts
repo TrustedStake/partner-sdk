@@ -8,3 +8,6 @@ export * from "./wallet-identity.ts";
 export * from "./actions.ts";
 
 export * from "./permissions.ts";
+
+export { createPolkadotNativeExitAdapter } from "./native-exit.ts";
+export { createExitWalletSubmitter } from "./exit-wallet.ts";

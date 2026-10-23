@@ -27,6 +27,8 @@ try {
   ]));
   const names = packed.files.map(file => file.path);
   assert(names.includes('AGENT-INTEGRATION.md'));
+  assert(names.includes('NATIVE-EXIT.md'));
+  assert(names.includes('examples/native-exit-quickstart.ts'));
   assert(names.includes('examples/agent-quickstart.ts'));
   assert(names.includes('examples/native-ui/assets/TS_logo_wordmark_white.svg'));
   assert(names.every(name => !name.split('/').some(part =>
@@ -43,10 +45,10 @@ try {
     '--globalconfig', path.join(consumer, 'npm-global.conf'), tarball], consumer);
   run(process.execPath, ['--input-type=module', '-e', `
     import assert from 'node:assert/strict';
-    import { createPartnerClient } from '@trustedstake/partner-sdk';
+    import { createPartnerClient, createNativeExitApi, createNativeExitController } from '@trustedstake/partner-sdk';
     import { SDK_VERSION, PARTNER_API_VERSION } from '@trustedstake/partner-sdk/core';
-    import { createServerBridge } from '@trustedstake/partner-sdk/server';
-    assert.equal(typeof createPartnerClient, 'function');
+    import { createServerBridge, createNativeExitBridge } from '@trustedstake/partner-sdk/server';
+    for (const fn of [createPartnerClient,createNativeExitApi,createNativeExitController,createNativeExitBridge]) assert.equal(typeof fn, 'function');
     assert.equal(typeof createServerBridge, 'function');
     assert.equal(PARTNER_API_VERSION, 1);
     assert.equal(SDK_VERSION, ${JSON.stringify(packed.version)});
@@ -57,6 +59,7 @@ try {
     '--lib', 'ES2022,DOM,DOM.Iterable',
     path.join(installed, 'examples/agent-quickstart.ts'),
     path.join(installed, 'examples/server-bridge.ts'),
+    path.join(installed, 'examples/native-exit-server.ts'),
   ], consumer);
   // The framework-neutral entries above work without Polkadot. Qualify the optional entry
   // separately against the host's already installed peers, with no registry or install.
@@ -66,18 +69,19 @@ try {
   }
   run(process.execPath, ['--input-type=module', '-e', `
     import assert from 'node:assert/strict';
-    import { prepareMultisigAction, createAuthorizationDeposit, importMultisigProposal } from '@trustedstake/partner-sdk/polkadot';
-    for (const fn of [prepareMultisigAction, createAuthorizationDeposit, importMultisigProposal]) assert.equal(typeof fn, 'function');
+    import { prepareMultisigAction, createAuthorizationDeposit, importMultisigProposal, createPolkadotNativeExitAdapter, createExitWalletSubmitter } from '@trustedstake/partner-sdk/polkadot';
+    for (const fn of [prepareMultisigAction, createAuthorizationDeposit, importMultisigProposal, createPolkadotNativeExitAdapter, createExitWalletSubmitter]) assert.equal(typeof fn, 'function');
   `], consumer);
   run(process.execPath, [path.join(repository, 'node_modules/typescript/bin/tsc'),
     '--noEmit', '--strict', '--skipLibCheck', '--target', 'ES2022',
     '--module', 'NodeNext', '--moduleResolution', 'NodeNext', '--lib', 'ES2022,DOM,DOM.Iterable',
     path.join(installed, 'examples/multisig-quickstart.ts'),
+    path.join(installed, 'examples/native-exit-quickstart.ts'),
   ], consumer);
   const digest = createHash('sha256').update(readFileSync(tarball)).digest('hex');
   writeFileSync(`${tarball}.sha256`, `${digest}  ${packed.filename}\n`);
   console.log(JSON.stringify({ filename: packed.filename, sha256: digest,
-    files: names.length, entryPoints: 'passed (core/browser/server without peers; optional polkadot with installed peers)', typedExamples: 'passed (3)', published: false }, null, 2));
+    files: names.length, entryPoints: 'passed (core/browser/server without peers; optional polkadot with installed peers)', typedExamples: 'passed (5)', published: false }, null, 2));
 } finally {
   rmSync(consumer, { recursive: true, force: true });
 }

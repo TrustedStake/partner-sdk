@@ -1,6 +1,8 @@
+> next.5 is a prerelease. Native exit requires the matching owner-exit API and qualification of the intended host, wallet and network; see [NATIVE-EXIT.md](./NATIVE-EXIT.md). Package availability alone does not establish live-service readiness.
+
 # TrustedStake partner SDK
 
-`@trustedstake/partner-sdk` **0.1.0-next.4**, a prerelease SDK. This repository contains only the partner integration client, optional chain adapter, examples and tests. Its framework-neutral entries have no runtime dependencies, React requirement, built-in wallet extension or browser credential. The optional `/polkadot` entry uses declared optional Polkadot peers. It is not a production release or an authorization to trade.
+`@trustedstake/partner-sdk` **0.1.0-next.5**, a prerelease SDK. This repository contains only the partner integration client, optional chain adapter, examples and tests. Its framework-neutral entries have no runtime dependencies, React requirement, built-in wallet extension or browser credential. The optional `/polkadot` entry uses declared optional Polkadot peers. It is not a production release or an authorization to trade.
 
 ## Entry points
 
@@ -61,7 +63,7 @@ Default partner visibility uses the maintained `partner_membership` scope, only 
 
 ## Optional chain adapter
 
-Implement `ChainAdapter` when the native UI owns permission transactions; omit it for catalog, wallet proof, recovery and receipt reads. The SDK intentionally does not implement trading or build allocation transactions in the browser.
+Implement `ChainAdapter` when the native UI owns permission transactions; omit it for catalog, wallet proof, recovery and receipt reads. The SDK intentionally does not implement the backend allocation/trading engine or build allocation transactions in the browser.
 
 - Read proxies, Staking proxy type, delay **0**, `realPaysFee`, block hash/height and chain timestamp together at **one finalized block**. Missing or unreadable state must throw, never become permission=true.
 - Confirm managed wallet, strategy proxy and genesis. An existing zero-delay Staking proxy avoids a duplicate addProxy. `permissionPlan` adds only missing Staking/fee consent calls, never transfer or Root permissions.

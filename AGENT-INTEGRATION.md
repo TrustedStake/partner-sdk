@@ -1,6 +1,8 @@
+> next.5 is a prerelease. Native exit requires the matching owner-exit API and qualification of the intended host, wallet and network; see [NATIVE-EXIT.md](./NATIVE-EXIT.md). Package availability alone does not establish live-service readiness.
+
 # TrustedStake native integration: agent quickstart
 
-Package: `@trustedstake/partner-sdk@0.1.0-next.4`. Prerelease,
+Package: `@trustedstake/partner-sdk@0.1.0-next.5`. Prerelease,
 ESM JavaScript plus TypeScript declarations. The browser/core/server entries need no framework or runtime dependencies. The optional `/polkadot` entry uses the declared Polkadot peer dependencies.
 Use this guide with the matching tarball and checksum. Use only a release published by the TrustedStake SDK repository or registry owner.
 
@@ -37,8 +39,8 @@ the precise adapter interfaces.
 Verify the supplied checksum, then install the file without registry access:
 
 ```sh
-shasum -a 256 -c trustedstake-partner-sdk-0.1.0-next.4.tgz.sha256
-npm install --offline --ignore-scripts ./trustedstake-partner-sdk-0.1.0-next.4.tgz
+shasum -a 256 -c trustedstake-partner-sdk-0.1.0-next.5.tgz.sha256
+npm install --offline --ignore-scripts ./trustedstake-partner-sdk-0.1.0-next.5.tgz
 ```
 
 Commit your lockfile. Import browser APIs from `@trustedstake/partner-sdk`, protocol
